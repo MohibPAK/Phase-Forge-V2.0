@@ -1,0 +1,38 @@
+name: Build PhaseForge executables
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: PhaseForge-windows
+          - os: macos-latest
+            artifact: PhaseForge-macos
+          - os: ubuntu-latest
+            artifact: PhaseForge-linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+      - name: Self-test (fast fail before the slow build)
+        run: python launcher.py --selftest
+      - name: Build with PyInstaller
+        run: pyinstaller --noconfirm PhaseForge.spec
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/PhaseForge
